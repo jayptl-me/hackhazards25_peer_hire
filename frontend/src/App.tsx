@@ -52,53 +52,53 @@ import PostedJobs from '@/pages/PostedJobs';
 const queryClient = new QueryClient();
 
 const App = () => {
-  let [isLoading, setIsLoading] = useState(false);
-  let [retryCount, setRetryCount] = useState(0);
+  const [isBackendConnected, setIsBackendConnected] = useState(false); // Start with false
+  const [isLoading, setIsLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 5;
 
   useEffect(() => {
-    // Log frontend environment variables
-    console.log('Frontend Environment Configuration:');
-    console.log('------------------------');
-    console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
-    console.log('VITE_AUTH_STORAGE_KEY:', import.meta.env.VITE_AUTH_STORAGE_KEY);
-    console.log('VITE_ENABLE_CHAT_FEATURE:', import.meta.env.VITE_ENABLE_CHAT_FEATURE);
-    console.log('VITE_ENABLE_SCREEN_RECORDING:', import.meta.env.VITE_ENABLE_SCREEN_RECORDING);
-    console.log('------------------------');
-
     const checkBackend = async () => {
+      console.log('Attempting to connect to backend...');
+      console.log('API URL:', import.meta.env.VITE_API_URL);
+
       try {
+        console.log('Making request to:', `${import.meta.env.VITE_API_URL}/spinup`);
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/spinup`, {
           headers: {
             'Content-Type': 'application/json',
-          }
+          },
+          timeout: 5000
         });
+
+        console.log('Backend response:', response);
         if (response.status >= 200 && response.status < 300) {
+          setIsBackendConnected(true);
           setIsLoading(false);
-          setRetryCount(0);
         }
       } catch (error) {
+        console.error('Backend connection error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          response: error.response
+        });
+
+        setIsBackendConnected(false);
         if (retryCount < MAX_RETRIES) {
-          setIsLoading(true);
+          console.log(`Retrying in ${Math.pow(2, retryCount + 1)} seconds...`);
           setRetryCount(prev => prev + 1);
-          // Exponential backoff: 2s, 4s, 8s
           setTimeout(checkBackend, Math.pow(2, retryCount + 1) * 1000);
         } else {
-          // After max retries, show the app anyway
           setIsLoading(false);
-          console.warn('Backend health check failed, but continuing to load app');
         }
       }
     };
 
-    // Only run health check in production
-    if (import.meta.env.PROD) {
-      checkBackend();
-    }
+    checkBackend();
   }, [retryCount]);
 
-  // Only show LoadingScreen during initial backend check attempts
-  if (isLoading && retryCount < MAX_RETRIES) {
+  if (isLoading || !isBackendConnected) { // Simplified condition
     return <LoadingScreen />;
   }
 
@@ -110,7 +110,7 @@ const App = () => {
             <FloatingNavbar />
             <Routes>
               {/* Public Marketing Pages */}
-              <Route path="/" element={isLoading == true ? <LoadingScreen /> : <Home />} />
+              <Route path="/" element={isLoading === true ? <LoadingScreen /> : <Home />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/enterprise" element={<Enterprise />} />
 

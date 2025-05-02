@@ -7,13 +7,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
+    
   },
   plugins: [
     react(),
@@ -22,6 +16,21 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: [
+            'react',
+            'react-dom',
+            'react-router-dom',
+          ],
+          // Add other chunks as needed based on your dependencies
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000, // Increase warning limit to 1000kb if needed
   },
   define: {
     'process.env.VITE_API_URL': mode === 'production' 
